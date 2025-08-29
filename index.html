@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Simulagailu Geometrikoa</title>
+    <style>
+        /* General styling for the body */
+        body { 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+            background-color: #f0f2f5; 
+            color: #333;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        /* Container for the 3D canvas */
+        #container { 
+            width: 100vw; 
+            height: 100vh; 
+            display: block; 
+            position: absolute;
+            top: 0;
+        }
+        /* Container for the CSS2D labels */
+        #label-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            pointer-events: none; /* Allows mouse interaction with the 3D canvas below */
+        }
+        .label {
+            color: #111;
+            font-family: sans-serif;
+            padding: 2px 5px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        /* Panel for displaying shape information */
+        #infoPanel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 320px; /* A bit wider for formulas */
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            pointer-events: auto; /* Re-enable pointer events for the panel */
+        }
+        /* Panel for shape selection controls */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            max-width: 90%;
+        }
+        .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .control-group-title {
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.8em;
+            color: #555;
+            margin-bottom: -5px;
+        }
+        /* Styling for buttons */
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        button:hover { 
+            background-color: #0056b3; 
+            transform: translateY(-2px);
+        }
+        #updateButton {
+            width: 100%;
+            margin-top: 15px;
+            background-color: #28a745; /* Green for update */
+        }
+        #updateButton:hover {
+            background-color: #218838;
+        }
+        /* Typography and input styling */
+        h2, h3 { 
+            margin-top: 0; 
+            margin-bottom: 10px;
+            color: #0056b3;
+        }
+        h2 { font-size: 1.4em; }
+        h3 { font-size: 1.1em; border-bottom: 1px solid #ddd; padding-bottom: 5px;}
+        p { margin: 8px 0; font-size: 1em; line-height: 1.5; }
+        strong { color: #333; }
+        hr { border: none; border-top: 1px solid #eee; margin: 15px 0; }
+        .param-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .param-group label { font-weight: bold; }
+        .param-group input { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; text-align: right; }
+        .formula { font-family: 'Courier New', Courier, monospace; color: #555; font-size: 0.9em; }
+        #formulaLegend { font-size: 0.8em; color: #666; margin-top: 10px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div id="container"></div>
+    <div id="label-container"></div>
+
+    <div id="infoPanel">
+        <h2 id="shapeName">Hautatu forma bat</h2>
+        <div id="paramsContainer"></div>
+        <div id="resultsContainer" style="display: none;">
+            <hr>
+            <h3>Kalkuluak</h3>
+            <p id="perimeterInfo"></p>
+            <p id="areaInfo"></p>
+            <p id="volumeInfo"></p>
+        </div>
+        <div id="formulasContainer" style="display: none;">
+            <hr>
+            <h3>Erabilitako Formulak</h3>
+            <p id="perimeterFormula" class="formula"></p>
+            <p id="areaFormula" class="formula"></p>
+            <p id="volumeFormula" class="formula"></p>
+            <div id="formulaLegend"></div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <div class="control-group-title">2D Irudiak</div>
+            <button onclick="selectShape('circle')">Zirkulua</button>
+            <button onclick="selectShape('triangle')">Triangelua</button>
+            <button onclick="selectShape('square')">Karratua</button>
+            <button onclick="selectShape('rectangle')">Laukizuzena</button>
+            <button onclick="selectShape('rhombus')">Erronboa</button>
+            <button onclick="selectShape('rhomboid')">Erronboidea</button>
+            <button onclick="selectShape('trapezoid')">Trapezioa</button>
+            <button onclick="selectShape('pentagon')">Pentagonoa</button>
+            <button onclick="selectShape('hexagon')">Hexagonoa</button>
+        </div>
+        <div class="control-group">
+            <div class="control-group-title">3D Gorputzak</div>
+            <button onclick="selectShape('cube')">Kuboa</button>
+            <button onclick="selectShape('orthoedron')">Ortoedroa</button>
+            <button onclick="selectShape('triangularPrism')">Prisma Triangeluarra</button>
+            <button onclick="selectShape('pyramid')">Piramidea</button>
+            <button onclick="selectShape('cone')">Konoa</button>
+            <button onclick="selectShape('cylinder')">Zilindroa</button>
+            <button onclick="selectShape('sphere')">Esfera</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // Basic scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xadd8e6);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(5, 6, 10);
+        
+        // WebGL renderer for the 3D scene
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('container').appendChild(renderer.domElement);
+        
+        // CSS2D renderer for labels
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        document.getElementById('label-container').appendChild(labelRenderer.domElement);
+
+        // Orbit controls for camera manipulation
+        const controls = new OrbitControls(camera, renderer.domElement); 
+        controls.enableDamping = true;
+        
+        // Lighting setup
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        directionalLight.position.set(10, 15, 10);
+        scene.add(directionalLight);
+
+        // Grid helper for perspective
+        const gridHelper = new THREE.GridHelper(50, 50, 0xaaaaaa, 0xcccccc);
+        scene.add(gridHelper);
+
+        let shapeGroup = null;
+        let currentShapeType = '';
+
+        // Main function to select a shape
+        window.selectShape = function(shapeType) {
+            currentShapeType = shapeType;
+            let defaultParams;
+            switch(shapeType) {
+                case 'orthoedron': defaultParams = { luzera: 6, zabalera: 4, altuera: 3 }; break;
+                case 'sphere': defaultParams = { erradioa: 3 }; break;
+                case 'cylinder': defaultParams = { erradioa: 2, altuera: 5 }; break;
+                case 'rectangle': defaultParams = { luzera: 8, zabalera: 6 }; break;
+                case 'cone': defaultParams = { erradioa: 3, altuera: 5 }; break;
+                case 'pyramid': defaultParams = { oinarria: 4, altuera: 5 }; break;
+                case 'triangle': defaultParams = { oinarria: 5, altuera: 4 }; break;
+                case 'circle': defaultParams = { erradioa: 3 }; break;
+                case 'trapezoid': defaultParams = { oinarriNagusia: 6, oinarriTxikia: 4, altuera: 3 }; break;
+                case 'square': defaultParams = { aldea: 5 }; break;
+                case 'rhombus': defaultParams = { diagNagusia: 8, diagTxikia: 5 }; break;
+                case 'rhomboid': defaultParams = { oinarria: 6, altuera: 4, angelua: 60 }; break;
+                case 'pentagon': defaultParams = { aldea: 3 }; break;
+                case 'hexagon': defaultParams = { aldea: 3 }; break;
+                case 'cube': defaultParams = { aldea: 4 }; break;
+                case 'triangularPrism': defaultParams = { oinarria: 4, altueraTriangelua: 3, luzeraPrisma: 6 }; break;
+            }
+            setupInfoPanel(shapeType, defaultParams);
+            createOrUpdateShape(shapeType, defaultParams);
+        }
+
+        // Creates or updates the 3D shape in the scene
+        function createOrUpdateShape(shapeType, params) {
+            clearScene();
+            shapeGroup = new THREE.Group();
+            scene.add(shapeGroup);
+            
+            let geometry, material;
+            material = new THREE.MeshStandardMaterial({ 
+                metalness: 0.3, 
+                roughness: 0.4,
+                transparent: true,
+                opacity: 0.85,
+                side: THREE.DoubleSide
+            });
+
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+            const getSlantHeight = (h, r) => Math.sqrt(h*h + r*r);
+
+            // Helper to create regular polygon shapes for 2D figures
+            const createRegularPolygonShape = (n, side) => {
+                const shape = new THREE.Shape();
+                const radius = side / (2 * Math.sin(Math.PI / n));
+                for (let i = 0; i < n; i++) {
+                    const angle = (i / n) * 2 * Math.PI;
+                    const x = radius * Math.cos(angle);
+                    const y = radius * Math.sin(angle);
+                    if (i === 0) shape.moveTo(x, y);
+                    else shape.lineTo(x, y);
+                }
+                shape.closePath();
+                return shape;
+            };
+
+            switch(shapeType) {
+                case 'orthoedron': {
+                    geometry = new THREE.BoxGeometry(params.luzera, params.altuera, params.zabalera);
+                    material.color.set(0xffa500);
+                    shapeGroup.add(new THREE.Mesh(geometry, material));
+                    const lPointsCube = [new THREE.Vector3(-params.luzera/2, -params.altuera/2, params.zabalera/2), new THREE.Vector3(params.luzera/2, -params.altuera/2, params.zabalera/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(lPointsCube), lineMaterial));
+                    shapeGroup.add(createLabel('l', 0, -params.altuera / 2 - 0.5, params.zabalera / 2));
+                    const zPointsCube = [new THREE.Vector3(params.luzera/2, -params.altuera/2, -params.zabalera/2), new THREE.Vector3(params.luzera/2, -params.altuera/2, params.zabalera/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zPointsCube), lineMaterial));
+                    shapeGroup.add(createLabel('z', params.luzera / 2 + 0.5, -params.altuera / 2, 0));
+                    const aPointsCube = [new THREE.Vector3(params.luzera/2, -params.altuera/2, params.zabalera/2), new THREE.Vector3(params.luzera/2, params.altuera/2, params.zabalera/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(aPointsCube), lineMaterial));
+                    shapeGroup.add(createLabel('a', params.luzera / 2 + 0.5, 0, params.zabalera / 2));
+                    shapeGroup.position.y = params.altuera / 2;
+                    break;
+                }
+                case 'sphere': {
+                    geometry = new THREE.SphereGeometry(params.erradioa, 64, 64);
+                    material.color.set(0xdc3545);
+                    shapeGroup.add(new THREE.Mesh(geometry, material));
+                    const rPointsSphere = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(params.erradioa, 0, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rPointsSphere), lineMaterial));
+                    shapeGroup.add(createLabel('r', params.erradioa / 2, 0.5, 0));
+                    shapeGroup.position.y = params.erradioa;
+                    break;
+                }
+                case 'cylinder': {
+                    geometry = new THREE.CylinderGeometry(params.erradioa, params.erradioa, params.altuera, 64);
+                    material.color.set(0x28a745);
+                    shapeGroup.add(new THREE.Mesh(geometry, material));
+                    const rPointsCyl = [new THREE.Vector3(0, -params.altuera/2, 0), new THREE.Vector3(params.erradioa, -params.altuera/2, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rPointsCyl), lineMaterial));
+                    shapeGroup.add(createLabel('r', params.erradioa / 2, -params.altuera/2 - 0.5, 0));
+                    const aPointsCyl = [new THREE.Vector3(-params.erradioa, -params.altuera/2, 0), new THREE.Vector3(-params.erradioa, params.altuera/2, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(aPointsCyl), lineMaterial));
+                    shapeGroup.add(createLabel('a', -params.erradioa - 0.5, 0, 0));
+                    shapeGroup.position.y = params.altuera / 2;
+                    break;
+                }
+                case 'rectangle': {
+                    geometry = new THREE.PlaneGeometry(params.luzera, params.zabalera);
+                    material.color.set(0x17a2b8);
+                    const planeMesh = new THREE.Mesh(geometry, material);
+                    planeMesh.rotation.x = -Math.PI / 2;
+                    shapeGroup.add(planeMesh);
+                    const lPointsPlane = [new THREE.Vector3(-params.luzera/2, 0, params.zabalera/2), new THREE.Vector3(params.luzera/2, 0, params.zabalera/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(lPointsPlane), lineMaterial));
+                    shapeGroup.add(createLabel('l', 0, 0, params.zabalera / 2 + 0.5));
+                    const zPointsPlane = [new THREE.Vector3(params.luzera/2, 0, -params.zabalera/2), new THREE.Vector3(params.luzera/2, 0, params.zabalera/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zPointsPlane), lineMaterial));
+                    shapeGroup.add(createLabel('z', params.luzera / 2 + 0.5, 0, 0));
+                    break;
+                }
+                case 'cone': {
+                    geometry = new THREE.ConeGeometry(params.erradioa, params.altuera, 64);
+                    material.color.set(0x6f42c1);
+                    shapeGroup.add(new THREE.Mesh(geometry, material));
+                    const rPointsCone = [new THREE.Vector3(0, -params.altuera/2, 0), new THREE.Vector3(params.erradioa, -params.altuera/2, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rPointsCone), lineMaterial));
+                    shapeGroup.add(createLabel('r', params.erradioa/2, -params.altuera/2 - 0.5, 0));
+                    const aPointsCone = [new THREE.Vector3(0, -params.altuera/2, 0), new THREE.Vector3(0, params.altuera/2, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(aPointsCone), lineMaterial));
+                    shapeGroup.add(createLabel('a', 0.5, 0, 0));
+                    const sPointsCone = [new THREE.Vector3(0, params.altuera/2, 0), new THREE.Vector3(params.erradioa, -params.altuera/2, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(sPointsCone), lineMaterial));
+                    shapeGroup.add(createLabel('s', params.erradioa/2 + 0.5, 0, 0));
+                    shapeGroup.position.y = params.altuera / 2;
+                    break;
+                }
+                case 'pyramid': {
+                    geometry = new THREE.ConeGeometry(params.oinarria / Math.sqrt(2), params.altuera, 4);
+                    material.color.set(0xfd7e14);
+                    const pyramidMesh = new THREE.Mesh(geometry, material);
+                    pyramidMesh.rotation.y = Math.PI / 4;
+                    shapeGroup.add(pyramidMesh);
+                    const oPointsPyr = [new THREE.Vector3(-params.oinarria/2, -params.altuera/2, params.oinarria/2), new THREE.Vector3(params.oinarria/2, -params.altuera/2, params.oinarria/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(oPointsPyr), lineMaterial));
+                    shapeGroup.add(createLabel('o', 0, -params.altuera/2 - 0.5, params.oinarria/2));
+                    const aPointsPyr = [new THREE.Vector3(0, -params.altuera/2, 0), new THREE.Vector3(0, params.altuera/2, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(aPointsPyr), lineMaterial));
+                    shapeGroup.add(createLabel('a', 0.5, 0, 0));
+                    const sPointsPyr = [new THREE.Vector3(0, params.altuera/2, 0), new THREE.Vector3(params.oinarria/2, -params.altuera/2, params.oinarria/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(sPointsPyr), lineMaterial));
+                    shapeGroup.add(createLabel('s', params.oinarria/4 + 0.5, 0, params.oinarria/4));
+                    shapeGroup.position.y = params.altuera / 2;
+                    break;
+                }
+                case 'triangle': {
+                    const triShape = new THREE.Shape();
+                    const o_tri = params.oinarria;
+                    const a_tri = params.altuera;
+                    triShape.moveTo(-o_tri/2, 0);
+                    triShape.lineTo(o_tri/2, 0);
+                    triShape.lineTo(0, a_tri);
+                    triShape.closePath();
+                    geometry = new THREE.ShapeGeometry(triShape);
+                    material.color.set(0xe83e8c);
+                    const triMesh = new THREE.Mesh(geometry, material);
+                    
+                    triMesh.rotation.x = -Math.PI / 2;
+                    shapeGroup.add(triMesh);
+                    
+                    const oPointsTri = [new THREE.Vector3(-o_tri/2, 0, 0), new THREE.Vector3(o_tri/2, 0, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(oPointsTri), lineMaterial));
+                    shapeGroup.add(createLabel('o', 0, 0, 0.5));
+                    
+                    const aPointsTri = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -a_tri)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(aPointsTri), lineMaterial));
+                    shapeGroup.add(createLabel('a', 0.5, 0, -a_tri/2));
+                    
+                    const sPointsTri = [new THREE.Vector3(o_tri/2, 0, 0), new THREE.Vector3(0, 0, -a_tri)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(sPointsTri), lineMaterial));
+                    shapeGroup.add(createLabel('s', o_tri/4 + 0.2, 0, -a_tri/2));
+                    
+                    break;
+                }
+                case 'circle': {
+                    geometry = new THREE.CircleGeometry(params.erradioa, 64);
+                    material.color.set(0xffc107);
+                    const circleMesh = new THREE.Mesh(geometry, material);
+                    circleMesh.rotation.x = -Math.PI / 2;
+                    shapeGroup.add(circleMesh);
+                    const rPointsCircle = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(params.erradioa, 0, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rPointsCircle), lineMaterial));
+                    shapeGroup.add(createLabel('r', params.erradioa / 2, 0, -0.5));
+                    break;
+                }
+                case 'trapezoid': {
+                    const B = params.oinarriNagusia;
+                    const b = params.oinarriTxikia;
+                    const a_trap = params.altuera;
+
+                    const trapShape = new THREE.Shape();
+                    const v1_2d = new THREE.Vector2(-B/2, 0); // bottom left
+                    const v2_2d = new THREE.Vector2(B/2, 0); // bottom right
+                    const v3_2d = new THREE.Vector2(b/2, a_trap); // top right
+                    const v4_2d = new THREE.Vector2(-b/2, a_trap); // top left
+                    trapShape.moveTo(v1_2d.x, v1_2d.y);
+                    trapShape.lineTo(v2_2d.x, v2_2d.y);
+                    trapShape.lineTo(v3_2d.x, v3_2d.y);
+                    trapShape.lineTo(v4_2d.x, v4_2d.y);
+                    trapShape.closePath();
+                    
+                    geometry = new THREE.ShapeGeometry(trapShape);
+                    material.color.set(0x6610f2);
+                    const trapMesh = new THREE.Mesh(geometry, material);
+                    shapeGroup.add(trapMesh);
+                    
+                    const p1 = new THREE.Vector3(v1_2d.x, v1_2d.y, 0);
+                    const p2 = new THREE.Vector3(v2_2d.x, v2_2d.y, 0);
+                    const p3 = new THREE.Vector3(v3_2d.x, v3_2d.y, 0);
+                    const p4 = new THREE.Vector3(v4_2d.x, v4_2d.y, 0);
+
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), lineMaterial));
+                    shapeGroup.add(createLabel('B', (p1.x + p2.x) / 2, p1.y - 0.5, 0));
+                    
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p4, p3]), lineMaterial));
+                    shapeGroup.add(createLabel('b', (p4.x + p3.x) / 2, p4.y + 0.5, 0));
+
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p2, p3]), lineMaterial));
+                    shapeGroup.add(createLabel('s', (p2.x + p3.x) / 2 + 0.2, (p2.y + p3.y) / 2, 0));
+                    
+                    const heightStart = new THREE.Vector3(p4.x, p1.y, 0);
+                    const heightEnd = new THREE.Vector3(p4.x, p4.y, 0);
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([heightStart, heightEnd]), lineMaterial));
+                    shapeGroup.add(createLabel('a', p4.x - 0.5, (p1.y + p4.y) / 2, 0));
+                    
+                    const box = new THREE.Box3().setFromObject(shapeGroup);
+                    const center = box.getCenter(new THREE.Vector3());
+                    // Center on X-axis only to keep base at y=0
+                    shapeGroup.position.x -= center.x;
+
+                    shapeGroup.rotation.x = -Math.PI / 2;
+                    
+                    break;
+                }
+                case 'square': {
+                    geometry = new THREE.PlaneGeometry(params.aldea, params.aldea);
+                    material.color.set(0x17a2b8);
+                    const squareMesh = new THREE.Mesh(geometry, material);
+                    squareMesh.rotation.x = -Math.PI / 2;
+                    shapeGroup.add(squareMesh);
+                    const alPointsSquare = [new THREE.Vector3(-params.aldea/2, 0, params.aldea/2), new THREE.Vector3(params.aldea/2, 0, params.aldea/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(alPointsSquare), lineMaterial));
+                    shapeGroup.add(createLabel('al', 0, 0, params.aldea / 2 + 0.5));
+                    break;
+                }
+                case 'rhombus': {
+                    const D = params.diagNagusia;
+                    const d = params.diagTxikia;
+                    const rhombusShape = new THREE.Shape();
+                    rhombusShape.moveTo(0, d/2);
+                    rhombusShape.lineTo(D/2, 0);
+                    rhombusShape.lineTo(0, -d/2);
+                    rhombusShape.lineTo(-D/2, 0);
+                    rhombusShape.closePath();
+                    geometry = new THREE.ShapeGeometry(rhombusShape);
+                    material.color.set(0x28a745);
+                    const rhombusMesh = new THREE.Mesh(geometry, material);
+                    rhombusMesh.rotation.x = -Math.PI / 2;
+                    shapeGroup.add(rhombusMesh);
+                    
+                    const DPoints = [new THREE.Vector3(-D/2, 0, 0), new THREE.Vector3(D/2, 0, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(DPoints), lineMaterial));
+                    shapeGroup.add(createLabel('D', 0, 0, 0.5));
+                    
+                    const dPoints = [new THREE.Vector3(0, 0, -d/2), new THREE.Vector3(0, 0, d/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(dPoints), lineMaterial));
+                    shapeGroup.add(createLabel('d', 0.5, 0, 0));
+                    
+                    const sPointsRho = [new THREE.Vector3(D/2, 0, 0), new THREE.Vector3(0, 0, -d/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(sPointsRho), lineMaterial));
+                    shapeGroup.add(createLabel('s', D/4 + 0.2, 0, -d/4));
+                    break;
+                }
+                case 'rhomboid': {
+                    const o = params.oinarria;
+                    const a = params.altuera;
+                    const angleRad = params.angelua * Math.PI / 180;
+                    const x_offset = a / Math.tan(angleRad);
+                    
+                    const rhomboidShape = new THREE.Shape();
+                    const v4_2d = new THREE.Vector2(0, 0); // bottom-left
+                    const v3_2d = new THREE.Vector2(o, 0); // bottom-right
+                    const v2_2d = new THREE.Vector2(o + x_offset, a); // top-right
+                    const v1_2d = new THREE.Vector2(x_offset, a); // top-left
+                    rhomboidShape.moveTo(v4_2d.x, v4_2d.y);
+                    rhomboidShape.lineTo(v3_2d.x, v3_2d.y);
+                    rhomboidShape.lineTo(v2_2d.x, v2_2d.y);
+                    rhomboidShape.lineTo(v1_2d.x, v1_2d.y);
+                    rhomboidShape.closePath();
+                    
+                    geometry = new THREE.ShapeGeometry(rhomboidShape);
+                    material.color.set(0xfd7e14);
+                    const rhomboidMesh = new THREE.Mesh(geometry, material);
+                    shapeGroup.add(rhomboidMesh);
+
+                    const p4 = new THREE.Vector3(v4_2d.x, v4_2d.y, 0);
+                    const p3 = new THREE.Vector3(v3_2d.x, v3_2d.y, 0);
+                    const p2 = new THREE.Vector3(v2_2d.x, v2_2d.y, 0);
+
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p4, p3]), lineMaterial));
+                    shapeGroup.add(createLabel('o', (p4.x + p3.x) / 2, p4.y - 0.5, 0));
+
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p3, p2]), lineMaterial));
+                    shapeGroup.add(createLabel('s', (p3.x + p2.x) / 2 + 0.2, (p3.y + p2.y) / 2, 0));
+
+                    const heightStart = new THREE.Vector3(v1_2d.x, v4_2d.y, 0);
+                    const heightEnd = new THREE.Vector3(v1_2d.x, v1_2d.y, 0);
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([heightStart, heightEnd]), lineMaterial));
+                    shapeGroup.add(createLabel('a', v1_2d.x - 0.5, (heightStart.y + heightEnd.y) / 2, 0));
+
+                    const box = new THREE.Box3().setFromObject(shapeGroup);
+                    const center = box.getCenter(new THREE.Vector3());
+                    // Center on X-axis only
+                    shapeGroup.position.x -= center.x;
+                    shapeGroup.rotation.x = -Math.PI / 2;
+
+                    break;
+                }
+                case 'pentagon':
+                case 'hexagon': {
+                    const n = shapeType === 'pentagon' ? 5 : 6;
+                    const polyShape = createRegularPolygonShape(n, params.aldea);
+                    geometry = new THREE.ShapeGeometry(polyShape);
+                    material.color.set(shapeType === 'pentagon' ? 0x6f42c1 : 0x20c997);
+                    const polyMesh = new THREE.Mesh(geometry, material);
+                    polyMesh.rotation.x = -Math.PI / 2;
+                    shapeGroup.add(polyMesh);
+                    
+                    // Aldea etiketa eta marra
+                    const radius = params.aldea / (2 * Math.sin(Math.PI / n));
+                    const p1 = new THREE.Vector3(radius, 0, 0);
+                    const p2 = new THREE.Vector3(radius * Math.cos(2 * Math.PI / n), 0, -radius * Math.sin(2 * Math.PI / n));
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), lineMaterial));
+                    shapeGroup.add(createLabel('al', (p1.x + p2.x) / 2, 0, (p1.z + p2.z) / 2 - 0.5));
+
+                    // Apotema marra eta etiketa gehitu
+                    const apothem = params.aldea / (2 * Math.tan(Math.PI / n));
+                    const angleToMidpoint = Math.PI / n;
+                    const apothemEndPoint = new THREE.Vector3(
+                        apothem * Math.cos(angleToMidpoint), 
+                        0, 
+                        -apothem * Math.sin(angleToMidpoint)
+                    );
+                    const apothemPoints = [new THREE.Vector3(0, 0, 0), apothemEndPoint];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(apothemPoints), lineMaterial));
+                    shapeGroup.add(createLabel('ap', apothemEndPoint.x / 2 + 0.2, 0, apothemEndPoint.z / 2));
+
+                    break;
+                }
+                case 'cube': {
+                    geometry = new THREE.BoxGeometry(params.aldea, params.aldea, params.aldea);
+                    material.color.set(0xffa500);
+                    shapeGroup.add(new THREE.Mesh(geometry, material));
+                    const alPointsCube = [new THREE.Vector3(-params.aldea/2, -params.aldea/2, params.aldea/2), new THREE.Vector3(params.aldea/2, -params.aldea/2, params.aldea/2)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(alPointsCube), lineMaterial));
+                    shapeGroup.add(createLabel('al', 0, -params.aldea / 2 - 0.5, params.aldea / 2));
+                    shapeGroup.position.y = params.aldea / 2;
+                    break;
+                }
+                case 'triangularPrism': {
+                    const o = params.oinarria;
+                    const a_tri = params.altueraTriangelua;
+                    const l_prism = params.luzeraPrisma;
+
+                    const triShape = new THREE.Shape();
+                    // Definitu triangeluaren forma XY planoan.
+                    // Oinarria X ardatzean egongo da.
+                    triShape.moveTo(-o / 2, 0);
+                    triShape.lineTo(o / 2, 0);
+                    triShape.lineTo(0, a_tri);
+                    triShape.closePath();
+
+                    const extrudeSettings = {
+                        steps: 1,
+                        depth: l_prism,
+                        bevelEnabled: false,
+                    };
+
+                    // Sortu geometria triangelua Z ardatzean zehar estruituz.
+                    // Estrusioa z=0-tik z=l_prism-era joango da.
+                    geometry = new THREE.ExtrudeGeometry(triShape, extrudeSettings);
+                    
+                    material.color.set(0x00bcd4); // Cyan color
+                    const prismMesh = new THREE.Mesh(geometry, material);
+                    
+                    shapeGroup.add(prismMesh);
+                    
+                    // Oinarri triangeluarra y=0 planoan kokatzeko (munduko koordenatuetan XZ planoa):
+                    // 1. Biratu talde osoa triangelua etzanda gera dadin.
+                    //    Ikuspegi lokaleko Z ardatza (estrusioaren norabidea) munduko Y ardatz bihurtzen da.
+                    shapeGroup.rotation.x = -Math.PI / 2;
+                    
+                    // Estrusioa z=0-n hasi denez, biraketaren ondoren prismaren oinarria
+                    // (lehen aurpegi triangeluarra) orain y=0-n dago.
+                    
+                    // Etiketak eta lerroak shapeGroup-aren espazio lokalean definitzen dira (biratu aurretik).
+                    
+                    // Triangeluaren oinarria (aurreko aurpegian, z=0-n)
+                    const basePoints = [new THREE.Vector3(-o/2, 0, 0), new THREE.Vector3(o/2, 0, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(basePoints), lineMaterial));
+                    shapeGroup.add(createLabel('o', 0, -0.5, 0));
+
+                    // Triangeluaren altuera (aurreko aurpegian, z=0-n)
+                    const heightPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, a_tri, 0)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(heightPoints), lineMaterial));
+                    shapeGroup.add(createLabel('a_tri', 0.5, a_tri/2, 0));
+                    
+                    // Prismaren luzera (estrusioaren norabideko ertz bat)
+                    const lengthPoints = [new THREE.Vector3(o/2, 0, 0), new THREE.Vector3(o/2, 0, l_prism)];
+                    shapeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(lengthPoints), lineMaterial));
+                    shapeGroup.add(createLabel('l_p', o/2 + 0.5, 0, l_prism/2));
+
+                    break;
+                }
+            }
+            
+            updateCalculations(shapeType, params);
+        }
+
+        // Helper function to create a CSS2D label
+        function createLabel(text, x, y, z) {
+            const div = document.createElement('div');
+            div.className = 'label';
+            div.textContent = text;
+            const label = new CSS2DObject(div);
+            label.position.set(x, y, z);
+            return label;
+        }
+        
+        // Sets up the info panel with parameter inputs
+        function setupInfoPanel(shapeType, params) {
+            const paramsContainer = document.getElementById('paramsContainer');
+            // Explicitly clear previous content to avoid issues
+            while (paramsContainer.firstChild) {
+                paramsContainer.removeChild(paramsContainer.firstChild);
+            }
+            let paramsHtml = '<h3>Hasierako Datuak</h3>';
+            let shapeName = '';
+
+            switch(shapeType) {
+                case 'orthoedron':
+                    shapeName = 'Ortoedroa';
+                    paramsHtml += `<div class="param-group"><label for="luzera">Luzera (l):</label><input type="number" id="luzera" value="${params.luzera}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="zabalera">Zabalera (z):</label><input type="number" id="zabalera" value="${params.zabalera}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    break;
+                case 'sphere':
+                    shapeName = 'Esfera';
+                    paramsHtml += `<div class="param-group"><label for="erradioa">Erradioa (r):</label><input type="number" id="erradioa" value="${params.erradioa}" step="1" min="1"></div>`;
+                    break;
+                case 'cylinder':
+                    shapeName = 'Zilindroa';
+                    paramsHtml += `<div class="param-group"><label for="erradioa">Erradioa (r):</label><input type="number" id="erradioa" value="${params.erradioa}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    break;
+                case 'rectangle':
+                    shapeName = 'Laukizuzena';
+                    paramsHtml += `<div class="param-group"><label for="luzera">Luzera (l):</label><input type="number" id="luzera" value="${params.luzera}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="zabalera">Zabalera (z):</label><input type="number" id="zabalera" value="${params.zabalera}" step="1" min="1"></div>`;
+                    break;
+                case 'cone':
+                    shapeName = 'Konoa';
+                    paramsHtml += `<div class="param-group"><label for="erradioa">Erradioa (r):</label><input type="number" id="erradioa" value="${params.erradioa}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    break;
+                case 'pyramid':
+                    shapeName = 'Piramidea';
+                    paramsHtml += `<div class="param-group"><label for="oinarria">Oinarria (o):</label><input type="number" id="oinarria" value="${params.oinarria}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    break;
+                case 'triangle':
+                    shapeName = 'Triangelua';
+                    paramsHtml += `<div class="param-group"><label for="oinarria">Oinarria (o):</label><input type="number" id="oinarria" value="${params.oinarria}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    break;
+                case 'circle':
+                    shapeName = 'Zirkulua';
+                    paramsHtml += `<div class="param-group"><label for="erradioa">Erradioa (r):</label><input type="number" id="erradioa" value="${params.erradioa}" step="1" min="1"></div>`;
+                    break;
+                case 'trapezoid':
+                    shapeName = 'Trapezioa';
+                    paramsHtml += `<div class="param-group"><label for="oinarriNagusia">Oinarri Nagusia (B):</label><input type="number" id="oinarriNagusia" value="${params.oinarriNagusia}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="oinarriTxikia">Oinarri Txikia (b):</label><input type="number" id="oinarriTxikia" value="${params.oinarriTxikia}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    break;
+                case 'square':
+                    shapeName = 'Karratua';
+                    paramsHtml += `<div class="param-group"><label for="aldea">Aldea (al):</label><input type="number" id="aldea" value="${params.aldea}" step="1" min="1"></div>`;
+                    break;
+                case 'rhombus':
+                    shapeName = 'Erronboa';
+                    paramsHtml += `<div class="param-group"><label for="diagNagusia">Diagonal Nagusia (D):</label><input type="number" id="diagNagusia" value="${params.diagNagusia}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="diagTxikia">Diagonal Txikia (d):</label><input type="number" id="diagTxikia" value="${params.diagTxikia}" step="1" min="1"></div>`;
+                    break;
+                case 'rhomboid':
+                    shapeName = 'Erronboidea';
+                    paramsHtml += `<div class="param-group"><label for="oinarria">Oinarria (o):</label><input type="number" id="oinarria" value="${params.oinarria}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altuera">Altuera (a):</label><input type="number" id="altuera" value="${params.altuera}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="angelua">Angelua (°):</label><input type="number" id="angelua" value="${params.angelua}" step="1" min="1" max="179"></div>`;
+                    break;
+                case 'pentagon':
+                    shapeName = 'Pentagonoa';
+                    paramsHtml += `<div class="param-group"><label for="aldea">Aldea (al):</label><input type="number" id="aldea" value="${params.aldea}" step="1" min="1"></div>`;
+                    break;
+                case 'hexagon':
+                    shapeName = 'Hexagonoa';
+                    paramsHtml += `<div class="param-group"><label for="aldea">Aldea (al):</label><input type="number" id="aldea" value="${params.aldea}" step="1" min="1"></div>`;
+                    break;
+                case 'cube':
+                    shapeName = 'Kuboa';
+                    paramsHtml += `<div class="param-group"><label for="aldea">Aldea (al):</label><input type="number" id="aldea" value="${params.aldea}" step="1" min="1"></div>`;
+                    break;
+                case 'triangularPrism':
+                    shapeName = 'Prisma Triangeluarra';
+                    paramsHtml += `<div class="param-group"><label for="oinarria">Oinarria (o):</label><input type="number" id="oinarria" value="${params.oinarria}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="altueraTriangelua">Triangeluaren Altuera (a_tri):</label><input type="number" id="altueraTriangelua" value="${params.altueraTriangelua}" step="1" min="1"></div>`;
+                    paramsHtml += `<div class="param-group"><label for="luzeraPrisma">Prismaren Luzera (l_p):</label><input type="number" id="luzeraPrisma" value="${params.luzeraPrisma}" step="1" min="1"></div>`;
+                    break;
+            }
+            paramsHtml += `<button id="updateButton">Eguneratu</button>`;
+            document.getElementById('shapeName').innerText = shapeName;
+            paramsContainer.innerHTML = paramsHtml;
+            document.getElementById('updateButton').addEventListener('click', handleUpdate);
+        }
+
+        // Updates the calculation results and formulas
+        function updateCalculations(shapeType, params) {
+            document.getElementById('resultsContainer').style.display = 'block';
+            document.getElementById('formulasContainer').style.display = 'block';
+            let perimeterText = '', areaText = '', volumeText = '';
+            let perimeterFormula = '', areaFormula = '', volumeFormula = '';
+            let legendText = '';
+            
+            const getSlantHeight = (h, r) => Math.sqrt(h*h + r*r);
+
+            switch(shapeType) {
+                case 'orthoedron':
+                    const perimetroOinarria = 2 * (params.luzera + params.zabalera);
+                    const azalera = 2 * (params.luzera * params.zabalera + params.luzera * params.altuera + params.zabalera * params.altuera);
+                    const bolumena = params.luzera * params.zabalera * params.altuera;
+                    perimeterText = `<strong>Oinarriaren perimetroa:</strong> ${perimetroOinarria.toFixed(2)} u`;
+                    areaText = `<strong>Azalera totala:</strong> ${azalera.toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${bolumena.toFixed(2)} u³`;
+                    perimeterFormula = `P = 2 * (l + z)`;
+                    areaFormula = `A = 2*(l*z + l*a + z*a)`;
+                    volumeFormula = `V = l * z * a`;
+                    break;
+                case 'sphere':
+                    const zirkunferentzia = 2 * Math.PI * params.erradioa;
+                    const azaleraEsfera = 4 * Math.PI * Math.pow(params.erradioa, 2);
+                    const bolumenaEsfera = (4/3) * Math.PI * Math.pow(params.erradioa, 3);
+                    perimeterText = `<strong>Zirkunferentzia maximoa:</strong> ${zirkunferentzia.toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${azaleraEsfera.toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${bolumenaEsfera.toFixed(2)} u³`;
+                    perimeterFormula = `Z = 2 * π * r`;
+                    areaFormula = `A = 4 * π * r²`;
+                    volumeFormula = `V = (4/3) * π * r³`;
+                    break;
+                case 'cylinder':
+                    const perimetroZilindro = 2 * Math.PI * params.erradioa;
+                    const azaleraOinarria = Math.PI * Math.pow(params.erradioa, 2);
+                    const azaleraAlboa = 2 * Math.PI * params.erradioa * params.altuera;
+                    const azaleraZilindroa = 2 * azaleraOinarria + azaleraAlboa;
+                    const bolumenaZilindroa = azaleraOinarria * params.altuera;
+                    perimeterText = `<strong>Oinarriaren perimetroa:</strong> ${perimetroZilindro.toFixed(2)} u`;
+                    areaText = `<strong>Azalera totala:</strong> ${azaleraZilindroa.toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${bolumenaZilindroa.toFixed(2)} u³`;
+                    perimeterFormula = `P = 2 * π * r`;
+                    areaFormula = `A = 2*π*r² + 2*π*r*a`;
+                    volumeFormula = `V = π * r² * a`;
+                    break;
+                case 'rectangle':
+                    const perimetroaPlanoa = 2 * (params.luzera + params.zabalera);
+                    const azaleraPlanoa = params.luzera * params.zabalera;
+                    perimeterText = `<strong>Perimetroa:</strong> ${perimetroaPlanoa.toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${azaleraPlanoa.toFixed(2)} u²`;
+                    volumeText = '<strong>Bolumena:</strong> N/A';
+                    perimeterFormula = `P = 2 * (l + z)`;
+                    areaFormula = `A = l * z`;
+                    volumeFormula = `N/A`;
+                    break;
+                case 'cone':
+                    const slantCone = getSlantHeight(params.altuera, params.erradioa);
+                    const areaBaseCone = Math.PI * params.erradioa**2;
+                    const areaSideCone = Math.PI * params.erradioa * slantCone;
+                    perimeterText = `<strong>Oinarriaren perimetroa:</strong> ${(2 * Math.PI * params.erradioa).toFixed(2)} u`;
+                    areaText = `<strong>Azalera totala:</strong> ${(areaBaseCone + areaSideCone).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${(1/3 * areaBaseCone * params.altuera).toFixed(2)} u³`;
+                    perimeterFormula = `P = 2 * π * r`;
+                    areaFormula = `A = π*r² + π*r*s`;
+                    volumeFormula = `V = (1/3) * π * r² * a`;
+                    legendText = `s = sortzailea`;
+                    break;
+                case 'pyramid':
+                    const slantPyr = getSlantHeight(params.altuera, params.oinarria / 2);
+                    const areaBasePyr = params.oinarria**2;
+                    const areaSidePyr = 2 * params.oinarria * slantPyr;
+                    perimeterText = `<strong>Oinarriaren perimetroa:</strong> ${(4 * params.oinarria).toFixed(2)} u`;
+                    areaText = `<strong>Azalera totala:</strong> ${(areaBasePyr + areaSidePyr).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${(1/3 * areaBasePyr * params.altuera).toFixed(2)} u³`;
+                    perimeterFormula = `P = 4 * o`;
+                    areaFormula = `A = o² + 2*o*s`;
+                    volumeFormula = `V = (1/3) * o² * a`;
+                    legendText = `s = sortzailea`;
+                    break;
+                case 'triangle':
+                    const sideTri = getSlantHeight(params.altuera, params.oinarria / 2);
+                    perimeterText = `<strong>Perimetroa:</strong> ${(params.oinarria + 2 * sideTri).toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${(0.5 * params.oinarria * params.altuera).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `P = o + 2*s`;
+                    areaFormula = `A = (o * a) / 2`;
+                    volumeFormula = `N/A`;
+                    legendText = `s = aldearen luzera (triangelu isoszele batentzat)`;
+                    break;
+                case 'circle':
+                    perimeterText = `<strong>Zirkunferentzia:</strong> ${(2 * Math.PI * params.erradioa).toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${(Math.PI * params.erradioa**2).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `Z = 2 * π * r`;
+                    areaFormula = `A = π * r²`;
+                    volumeFormula = `N/A`;
+                    break;
+                case 'trapezoid':
+                    const sideTrap = getSlantHeight(params.altuera, (params.oinarriNagusia - params.oinarriTxikia) / 2);
+                    perimeterText = `<strong>Perimetroa:</strong> ${(params.oinarriNagusia + params.oinarriTxikia + 2 * sideTrap).toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${( (params.oinarriNagusia + params.oinarriTxikia) / 2 * params.altuera).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `P = B + b + 2s`;
+                    areaFormula = `A = ((B+b)/2) * a`;
+                    volumeFormula = `N/A`;
+                    legendText = `s = aldearen luzera (trapezio isoszele batentzat)`;
+                    break;
+                case 'square':
+                    perimeterText = `<strong>Perimetroa:</strong> ${(4 * params.aldea).toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${(params.aldea**2).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `P = 4 * al`;
+                    areaFormula = `A = al²`;
+                    volumeFormula = `N/A`;
+                    break;
+                case 'rhombus':
+                    const sideRho = getSlantHeight(params.diagNagusia/2, params.diagTxikia/2);
+                    perimeterText = `<strong>Perimetroa:</strong> ${(4 * sideRho).toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${(params.diagNagusia * params.diagTxikia / 2).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `P = 4 * s`;
+                    areaFormula = `A = (D * d) / 2`;
+                    volumeFormula = `N/A`;
+                    legendText = `s = aldearen luzera`;
+                    break;
+                case 'rhomboid':
+                    const angleRad = params.angelua * Math.PI / 180;
+                    const sideRhomboid = params.altuera / Math.sin(angleRad);
+                    perimeterText = `<strong>Perimetroa:</strong> ${(2 * (params.oinarria + sideRhomboid)).toFixed(2)} u`;
+                    areaText = `<strong>Azalera:</strong> ${(params.oinarria * params.altuera).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `P = 2 * (o + s)`;
+                    areaFormula = `A = o * a`;
+                    volumeFormula = `N/A`;
+                    legendText = `s = ondoko aldearen luzera`;
+                    break;
+                case 'pentagon':
+                case 'hexagon':
+                    const n = shapeType === 'pentagon' ? 5 : 6;
+                    const apothem = params.aldea / (2 * Math.tan(Math.PI / n));
+                    const perimeterPoly = n * params.aldea;
+                    areaText = `<strong>Azalera:</strong> ${(perimeterPoly * apothem / 2).toFixed(2)} u²`;
+                    perimeterText = `<strong>Perimetroa:</strong> ${perimeterPoly.toFixed(2)} u`;
+                    volumeText = `<strong>Bolumena:</strong> N/A`;
+                    perimeterFormula = `P = n * al`;
+                    areaFormula = `A = (P * ap) / 2`;
+                    volumeFormula = `N/A`;
+                    legendText = `n = aldeen kopurua, ap = apotema`;
+                    break;
+                case 'cube':
+                    perimeterText = `<strong>Oinarriaren perimetroa:</strong> ${(4 * params.aldea).toFixed(2)} u`;
+                    areaText = `<strong>Azalera totala:</strong> ${(6 * params.aldea**2).toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${(params.aldea**3).toFixed(2)} u³`;
+                    perimeterFormula = `P = 4 * al`;
+                    areaFormula = `A = 6 * al²`;
+                    volumeFormula = `V = al³`;
+                    break;
+                case 'triangularPrism':
+                    const sidePrism = getSlantHeight(params.altueraTriangelua, params.oinarria / 2);
+                    const perimeterBasePrism = params.oinarria + 2 * sidePrism;
+                    const areaBasePrism = 0.5 * params.oinarria * params.altueraTriangelua;
+                    const areaLateralPrism = perimeterBasePrism * params.luzeraPrisma;
+                    const areaTotalPrism = 2 * areaBasePrism + areaLateralPrism;
+                    const volumePrism = areaBasePrism * params.luzeraPrisma;
+
+                    perimeterText = `<strong>Oinarriaren perimetroa:</strong> ${perimeterBasePrism.toFixed(2)} u`;
+                    areaText = `<strong>Azalera totala:</strong> ${areaTotalPrism.toFixed(2)} u²`;
+                    volumeText = `<strong>Bolumena:</strong> ${volumePrism.toFixed(2)} u³`;
+                    perimeterFormula = `P_oin = o + 2*s`;
+                    areaFormula = `A_totala = 2*A_oin + P_oin*l_p`;
+                    volumeFormula = `V = A_oin * l_p`;
+                    legendText = `s = aldearen luzera, A_oin = oinarriaren azalera, P_oin = oinarriaren perimetroa`;
+                    break;
+            }
+            document.getElementById('perimeterInfo').innerHTML = perimeterText;
+            document.getElementById('areaInfo').innerHTML = areaText;
+            document.getElementById('volumeInfo').style.display = volumeFormula === 'N/A' ? 'none' : 'block';
+            document.getElementById('volumeInfo').innerHTML = volumeText;
+            document.getElementById('perimeterFormula').innerHTML = `<strong>Perimetroa:</strong> ${perimeterFormula}`;
+            document.getElementById('areaFormula').innerHTML = `<strong>Azalera:</strong> ${areaFormula}`;
+            document.getElementById('volumeFormula').style.display = volumeFormula === 'N/A' ? 'none' : 'block';
+            document.getElementById('volumeFormula').innerHTML = `<strong>Bolumena:</strong> ${volumeFormula}`;
+            document.getElementById('formulaLegend').innerHTML = legendText;
+        }
+
+        // Handles the update button click
+        function handleUpdate() {
+            const newParams = {};
+            if (document.getElementById('luzera')) newParams.luzera = Math.max(1, parseInt(document.getElementById('luzera').value) || 0);
+            if (document.getElementById('zabalera')) newParams.zabalera = Math.max(1, parseInt(document.getElementById('zabalera').value) || 0);
+            if (document.getElementById('altuera')) newParams.altuera = Math.max(1, parseInt(document.getElementById('altuera').value) || 0);
+            if (document.getElementById('erradioa')) newParams.erradioa = Math.max(1, parseInt(document.getElementById('erradioa').value) || 0);
+            if (document.getElementById('oinarria')) newParams.oinarria = Math.max(1, parseInt(document.getElementById('oinarria').value) || 0);
+            if (document.getElementById('aldea')) newParams.aldea = Math.max(1, parseInt(document.getElementById('aldea').value) || 0);
+            if (document.getElementById('oinarriNagusia')) newParams.oinarriNagusia = Math.max(1, parseInt(document.getElementById('oinarriNagusia').value) || 0);
+            if (document.getElementById('oinarriTxikia')) newParams.oinarriTxikia = Math.max(1, parseInt(document.getElementById('oinarriTxikia').value) || 0);
+            if (document.getElementById('diagNagusia')) newParams.diagNagusia = Math.max(1, parseInt(document.getElementById('diagNagusia').value) || 0);
+            if (document.getElementById('diagTxikia')) newParams.diagTxikia = Math.max(1, parseInt(document.getElementById('diagTxikia').value) || 0);
+            if (document.getElementById('angelua')) newParams.angelua = Math.max(1, Math.min(179, parseInt(document.getElementById('angelua').value) || 0));
+            if (document.getElementById('altueraTriangelua')) newParams.altueraTriangelua = Math.max(1, parseInt(document.getElementById('altueraTriangelua').value) || 0);
+            if (document.getElementById('luzeraPrisma')) newParams.luzeraPrisma = Math.max(1, parseInt(document.getElementById('luzeraPrisma').value) || 0);
+            createOrUpdateShape(currentShapeType, newParams);
+        }
+
+        // Clears the current shape from the scene to prevent memory leaks
+        function clearScene() {
+            if (shapeGroup) {
+                shapeGroup.traverse(object => {
+                    if (object.geometry) {
+                        object.geometry.dispose();
+                    }
+                    if (object.material) {
+                        if (Array.isArray(object.material)) {
+                            object.material.forEach(material => material.dispose());
+                        } else {
+                            object.material.dispose();
+                        }
+                    }
+                });
+                while (shapeGroup.children.length > 0) {
+                    shapeGroup.remove(shapeGroup.children[0]);
+                }
+                scene.remove(shapeGroup);
+                shapeGroup = null;
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // Handles window resize events
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        // Start the animation and select a default shape
+        animate();
+        selectShape('triangularPrism');
+    </script>
+
+</body>
+</html>
