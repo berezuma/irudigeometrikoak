@@ -62,6 +62,10 @@
             box-sizing: border-box;
         }
 
+        #info-columns {
+            display: block; /* Default for mobile */
+        }
+
         /* Canvas Wrapper (Bottom) */
         #canvas-wrapper {
             flex-grow: 1; /* Take remaining space */
@@ -74,6 +78,9 @@
             height: 100%;
             top: 0;
             left: 0;
+        }
+        #label-container {
+            pointer-events: none; /* Allows mouse interaction with the 3D canvas below */
         }
         .label {
             color: #111;
@@ -121,10 +128,43 @@
         strong { color: #333; }
         hr { border: none; border-top: 1px solid #eee; margin: 15px 0; }
         .param-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .param-group label { font-weight: bold; }
+        .param-group label { font-weight: bold; font-size: 0.9em; }
         .param-group input { width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; text-align: right; }
         .formula { font-family: 'Courier New', Courier, monospace; color: #555; font-size: 0.9em; }
         #formulaLegend { font-size: 0.8em; color: #666; margin-top: 10px; font-style: italic; }
+
+        /* Responsive adjustments for mobile */
+        @media (max-width: 768px) {
+            #controls button {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+            .control-group {
+                gap: 5px;
+            }
+            .param-group label {
+                font-size: 0.8em;
+            }
+        }
+
+        /* Responsive adjustments for desktop */
+        @media (min-width: 769px) {
+            #controls button {
+                padding: 9px 14px;
+                font-size: 14px;
+            }
+            #infoPanel {
+                max-height: none; /* Remove height limit on desktop */
+            }
+            #info-columns {
+                display: flex;
+                gap: 24px;
+            }
+            #params-column, #calc-column {
+                flex: 1;
+                min-width: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -157,21 +197,27 @@
 
         <div id="infoPanel">
             <h2 id="shapeName">Hautatu forma bat</h2>
-            <div id="paramsContainer"></div>
-            <div id="resultsContainer" style="display: none;">
-                <hr>
-                <h3>Kalkuluak</h3>
-                <p id="perimeterInfo"></p>
-                <p id="areaInfo"></p>
-                <p id="volumeInfo"></p>
-            </div>
-            <div id="formulasContainer" style="display: none;">
-                <hr>
-                <h3>Erabilitako Formulak</h3>
-                <p id="perimeterFormula" class="formula"></p>
-                <p id="areaFormula" class="formula"></p>
-                <p id="volumeFormula" class="formula"></p>
-                <div id="formulaLegend"></div>
+            <div id="info-columns">
+                <div id="params-column">
+                    <h3>Hasierako Datuak</h3>
+                    <div id="paramsContainer"></div>
+                </div>
+                <div id="calc-column">
+                    <div id="resultsContainer" style="display: none;">
+                        <h3>Kalkuluak</h3>
+                        <p id="perimeterInfo"></p>
+                        <p id="areaInfo"></p>
+                        <p id="volumeInfo"></p>
+                    </div>
+                    <div id="formulasContainer" style="display: none;">
+                        <hr>
+                        <h3>Erabilitako Formulak</h3>
+                        <p id="perimeterFormula" class="formula"></p>
+                        <p id="areaFormula" class="formula"></p>
+                        <p id="volumeFormula" class="formula"></p>
+                        <div id="formulaLegend"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -673,7 +719,7 @@
             while (paramsContainer.firstChild) {
                 paramsContainer.removeChild(paramsContainer.firstChild);
             }
-            let paramsHtml = '<h3>Hasierako Datuak</h3>';
+            let paramsHtml = '';
             let shapeName = '';
 
             switch(shapeType) {
