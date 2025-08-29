@@ -149,12 +149,16 @@
 
         /* Responsive adjustments for desktop */
         @media (min-width: 769px) {
+            #controls {
+                max-height: 20vh;
+                overflow-y: auto;
+            }
             #controls button {
-                padding: 9px 14px;
-                font-size: 14px;
+                padding: 6px 12px;
+                font-size: 13px;
             }
             #infoPanel {
-                max-height: none; /* Remove height limit on desktop */
+                max-height: 30vh;
             }
             #info-columns {
                 display: flex;
@@ -1064,3 +1068,4 @@
 
 </body>
 </html>
+
