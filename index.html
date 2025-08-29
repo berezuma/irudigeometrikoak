@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Simulagailu Geometrikoa</title>
+    <title>Irudi geometrikoen simulagailua</title>
     <style>
         /* General styling for the body */
         body { 
@@ -133,6 +133,27 @@
         .formula { font-family: 'Courier New', Courier, monospace; color: #555; font-size: 0.9em; }
         #formulaLegend { font-size: 0.8em; color: #666; margin-top: 10px; font-style: italic; }
 
+        /* Footer styling */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #212529;
+            color: #f8f9fa;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 14px;
+            z-index: 20;
+        }
+        footer a {
+            color: #adb5bd;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+
         /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
             #controls button {
@@ -230,6 +251,10 @@
             <div id="label-container"></div>
         </div>
     </div>
+
+    <footer>
+        Egilea: Beñat Erezuma Arisketa • <a href="https://berezuma.com" target="_blank">berezuma.com</a> • Lizentzia: MIT
+    </footer>
 
     <script type="importmap">
         {
@@ -1068,4 +1093,3 @@
 
 </body>
 </html>
-
