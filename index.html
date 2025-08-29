@@ -206,7 +206,7 @@
     <div id="app-container">
         <div id="controls">
             <div class="control-group">
-                <div class="control-group-title">2D Irudiak</div>
+                <div class="control-group-title">2D irudiak</div>
                 <button onclick="selectShape('circle')">Zirkulua</button>
                 <button onclick="selectShape('triangle')">Triangelua</button>
                 <button onclick="selectShape('square')">Karratua</button>
@@ -218,10 +218,10 @@
                 <button onclick="selectShape('hexagon')">Hexagonoa</button>
             </div>
             <div class="control-group">
-                <div class="control-group-title">3D Gorputzak</div>
+                <div class="control-group-title">3D gorputzak</div>
                 <button onclick="selectShape('cube')">Kuboa</button>
                 <button onclick="selectShape('orthoedron')">Ortoedroa</button>
-                <button onclick="selectShape('triangularPrism')">Prisma Triangeluarra</button>
+                <button onclick="selectShape('triangularPrism')">Prisma triangeluarra</button>
                 <button onclick="selectShape('pyramid')">Piramidea</button>
                 <button onclick="selectShape('cone')">Konoa</button>
                 <button onclick="selectShape('cylinder')">Zilindroa</button>
@@ -233,7 +233,7 @@
             <h2 id="shapeName">Hautatu forma bat</h2>
             <div id="info-columns">
                 <div id="params-column">
-                    <h3>Hasierako Datuak</h3>
+                    <h3>Hasierako datuak</h3>
                     <div id="paramsContainer"></div>
                 </div>
                 <div id="calc-column">
@@ -245,7 +245,7 @@
                     </div>
                     <div id="formulasContainer" style="display: none;">
                         <hr>
-                        <h3>Erabilitako Formulak</h3>
+                        <h3>Erabilitako formulak</h3>
                         <p id="perimeterFormula" class="formula"></p>
                         <p id="areaFormula" class="formula"></p>
                         <p id="volumeFormula" class="formula"></p>
@@ -834,7 +834,7 @@
                     paramsHtml += `<div class="param-group"><label for="aldea">Aldea (al):</label><input type="number" id="aldea" value="${params.aldea}" step="1" min="1"></div>`;
                     break;
                 case 'triangularPrism':
-                    shapeName = 'Prisma Triangeluarra';
+                    shapeName = 'Prisma triangeluarra';
                     paramsHtml += `<div class="param-group"><label for="oinarria">Oinarria (o):</label><input type="number" id="oinarria" value="${params.oinarria}" step="1" min="1"></div>`;
                     paramsHtml += `<div class="param-group"><label for="altueraTriangelua">Triangeluaren Altuera (a_tri):</label><input type="number" id="altueraTriangelua" value="${params.altueraTriangelua}" step="1" min="1"></div>`;
                     paramsHtml += `<div class="param-group"><label for="luzeraPrisma">Prismaren Luzera (l_p):</label><input type="number" id="luzeraPrisma" value="${params.luzeraPrisma}" step="1" min="1"></div>`;
