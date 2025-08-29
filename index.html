@@ -13,61 +13,27 @@
             color: #333;
             overflow: hidden; /* Prevent scrollbars */
         }
-        /* Container for the 3D canvas */
-        #container { 
-            width: 100vw; 
-            height: 100vh; 
-            display: block; 
-            position: absolute;
-            top: 0;
-        }
-        /* Container for the CSS2D labels */
-        #label-container {
-            width: 100vw;
+        
+        /* Main App Layout - Flex container */
+        #app-container {
+            display: flex;
+            flex-direction: column;
             height: 100vh;
-            position: absolute;
-            top: 0;
-            pointer-events: none; /* Allows mouse interaction with the 3D canvas below */
+            width: 100vw;
         }
-        .label {
-            color: #111;
-            font-family: sans-serif;
-            padding: 2px 5px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 3px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        /* Panel for displaying shape information */
-        #infoPanel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: 320px; /* A bit wider for formulas */
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-            pointer-events: auto; /* Re-enable pointer events for the panel */
-        }
-        /* Panel for shape selection controls */
+
+        /* Controls Panel (Top) */
         #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background-color: #ffffff;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            pointer-events: auto;
-            max-width: 90%;
+            flex-shrink: 0; /* Prevent shrinking */
+            z-index: 10;
+            overflow-x: auto; /* Allow horizontal scroll on small screens if needed */
         }
         .control-group {
             display: flex;
@@ -79,10 +45,46 @@
             width: 100%;
             text-align: center;
             font-weight: bold;
-            font-size: 0.8em;
+            font-size: 0.9em;
             color: #555;
             margin-bottom: -5px;
         }
+
+        /* Info Panel (Middle) */
+        #infoPanel {
+            background-color: #f8f9fa;
+            padding: 16px;
+            overflow-y: auto;
+            flex-shrink: 0; /* Prevent shrinking */
+            max-height: 35vh; /* Limit height to avoid taking too much space */
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+            box-sizing: border-box;
+        }
+
+        /* Canvas Wrapper (Bottom) */
+        #canvas-wrapper {
+            flex-grow: 1; /* Take remaining space */
+            position: relative;
+            min-height: 0; /* Fix for flexbox shrinking issues */
+        }
+        #container, #label-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        .label {
+            color: #111;
+            font-family: sans-serif;
+            padding: 2px 5px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
         /* Styling for buttons */
         button {
             padding: 10px 15px;
@@ -106,6 +108,7 @@
         #updateButton:hover {
             background-color: #218838;
         }
+
         /* Typography and input styling */
         h2, h3 { 
             margin-top: 0; 
@@ -126,51 +129,55 @@
 </head>
 <body>
 
-    <div id="container"></div>
-    <div id="label-container"></div>
+    <div id="app-container">
+        <div id="controls">
+            <div class="control-group">
+                <div class="control-group-title">2D Irudiak</div>
+                <button onclick="selectShape('circle')">Zirkulua</button>
+                <button onclick="selectShape('triangle')">Triangelua</button>
+                <button onclick="selectShape('square')">Karratua</button>
+                <button onclick="selectShape('rectangle')">Laukizuzena</button>
+                <button onclick="selectShape('rhombus')">Erronboa</button>
+                <button onclick="selectShape('rhomboid')">Erronboidea</button>
+                <button onclick="selectShape('trapezoid')">Trapezioa</button>
+                <button onclick="selectShape('pentagon')">Pentagonoa</button>
+                <button onclick="selectShape('hexagon')">Hexagonoa</button>
+            </div>
+            <div class="control-group">
+                <div class="control-group-title">3D Gorputzak</div>
+                <button onclick="selectShape('cube')">Kuboa</button>
+                <button onclick="selectShape('orthoedron')">Ortoedroa</button>
+                <button onclick="selectShape('triangularPrism')">Prisma Triangeluarra</button>
+                <button onclick="selectShape('pyramid')">Piramidea</button>
+                <button onclick="selectShape('cone')">Konoa</button>
+                <button onclick="selectShape('cylinder')">Zilindroa</button>
+                <button onclick="selectShape('sphere')">Esfera</button>
+            </div>
+        </div>
 
-    <div id="infoPanel">
-        <h2 id="shapeName">Hautatu forma bat</h2>
-        <div id="paramsContainer"></div>
-        <div id="resultsContainer" style="display: none;">
-            <hr>
-            <h3>Kalkuluak</h3>
-            <p id="perimeterInfo"></p>
-            <p id="areaInfo"></p>
-            <p id="volumeInfo"></p>
+        <div id="infoPanel">
+            <h2 id="shapeName">Hautatu forma bat</h2>
+            <div id="paramsContainer"></div>
+            <div id="resultsContainer" style="display: none;">
+                <hr>
+                <h3>Kalkuluak</h3>
+                <p id="perimeterInfo"></p>
+                <p id="areaInfo"></p>
+                <p id="volumeInfo"></p>
+            </div>
+            <div id="formulasContainer" style="display: none;">
+                <hr>
+                <h3>Erabilitako Formulak</h3>
+                <p id="perimeterFormula" class="formula"></p>
+                <p id="areaFormula" class="formula"></p>
+                <p id="volumeFormula" class="formula"></p>
+                <div id="formulaLegend"></div>
+            </div>
         </div>
-        <div id="formulasContainer" style="display: none;">
-            <hr>
-            <h3>Erabilitako Formulak</h3>
-            <p id="perimeterFormula" class="formula"></p>
-            <p id="areaFormula" class="formula"></p>
-            <p id="volumeFormula" class="formula"></p>
-            <div id="formulaLegend"></div>
-        </div>
-    </div>
 
-    <div id="controls">
-        <div class="control-group">
-            <div class="control-group-title">2D Irudiak</div>
-            <button onclick="selectShape('circle')">Zirkulua</button>
-            <button onclick="selectShape('triangle')">Triangelua</button>
-            <button onclick="selectShape('square')">Karratua</button>
-            <button onclick="selectShape('rectangle')">Laukizuzena</button>
-            <button onclick="selectShape('rhombus')">Erronboa</button>
-            <button onclick="selectShape('rhomboid')">Erronboidea</button>
-            <button onclick="selectShape('trapezoid')">Trapezioa</button>
-            <button onclick="selectShape('pentagon')">Pentagonoa</button>
-            <button onclick="selectShape('hexagon')">Hexagonoa</button>
-        </div>
-        <div class="control-group">
-            <div class="control-group-title">3D Gorputzak</div>
-            <button onclick="selectShape('cube')">Kuboa</button>
-            <button onclick="selectShape('orthoedron')">Ortoedroa</button>
-            <button onclick="selectShape('triangularPrism')">Prisma Triangeluarra</button>
-            <button onclick="selectShape('pyramid')">Piramidea</button>
-            <button onclick="selectShape('cone')">Konoa</button>
-            <button onclick="selectShape('cylinder')">Zilindroa</button>
-            <button onclick="selectShape('sphere')">Esfera</button>
+        <div id="canvas-wrapper">
+            <div id="container"></div>
+            <div id="label-container"></div>
         </div>
     </div>
 
@@ -188,21 +195,24 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
+        // Get the container for the canvas
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+
         // Basic scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xadd8e6);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, canvasWrapper.clientWidth / canvasWrapper.clientHeight, 0.1, 1000);
         camera.position.set(5, 6, 10);
         
         // WebGL renderer for the 3D scene
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(canvasWrapper.clientWidth, canvasWrapper.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('container').appendChild(renderer.domElement);
         
         // CSS2D renderer for labels
         const labelRenderer = new CSS2DRenderer();
-        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.setSize(canvasWrapper.clientWidth, canvasWrapper.clientHeight);
         labelRenderer.domElement.style.position = 'absolute';
         labelRenderer.domElement.style.top = '0px';
         document.getElementById('label-container').appendChild(labelRenderer.domElement);
@@ -990,10 +1000,13 @@
 
         // Handles window resize events
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            const wrapper = document.getElementById('canvas-wrapper');
+            if (!wrapper) return;
+
+            camera.aspect = wrapper.clientWidth / wrapper.clientHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
+            labelRenderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
         }
 
         window.addEventListener('resize', onWindowResize);
